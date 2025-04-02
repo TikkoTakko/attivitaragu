@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import pandas as pd
@@ -25,8 +24,11 @@ def scarica_attivita_osm(località, filtro=None):
         if "name" in tags:
             tipo = tags.get("shop") or tags.get("amenity") or "Altro"
             attività.append({
-                "nome": tags["name"],
+                "nome": tags.get("name", "N/D"),
                 "tipo": tipo,
+                "telefono": tags.get("contact:phone", tags.get("phone", "")),
+                "email": tags.get("contact:email", tags.get("email", "")),
+                "sito_web": tags.get("contact:website", tags.get("website", "")),
                 "lat": elem.get("lat"),
                 "lon": elem.get("lon"),
             })
@@ -65,9 +67,17 @@ st.download_button(
 if not df_filtrato.empty:
     mappa = folium.Map(location=[df_filtrato["lat"].mean(), df_filtrato["lon"].mean()], zoom_start=13)
     for _, row in df_filtrato.iterrows():
+        popup_html = f"<b>{row['nome']}</b><br>{row['tipo']}"
+        if row['telefono']:
+            popup_html += f"<br>📞 {row['telefono']}"
+        if row['email']:
+            popup_html += f"<br>📧 {row['email']}"
+        if row['sito_web']:
+            popup_html += f"<br><a href='{row['sito_web']}' target='_blank'>🌐 Sito Web</a>"
+
         folium.Marker(
             location=[row["lat"], row["lon"]],
-            popup=f"{row['nome']} ({row['tipo']})",
+            popup=folium.Popup(popup_html, max_width=300),
             icon=folium.Icon(color="blue", icon="info-sign")
         ).add_to(mappa)
     st_folium(mappa, width=900, height=600)
